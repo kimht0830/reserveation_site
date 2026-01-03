@@ -3,7 +3,9 @@ import { BrowserRouter, Routes, Route, Link , Navigate, useLocation} from "react
 import "./App.css";
 import Login from "./pages/Login";
 import Signup from "./pages/SignUp";
-import Reserve from "./pages/Reserve"
+import Reserve from "./pages/Reserve";
+import Check from "./pages/Check";
+import Cancel from "./pages/Cancel";
 import { supabase } from "./lib/supabase";
 import { AuthProvider, useAuth } from "./auth/AuthContext"; // ✅ 추가
 
@@ -84,7 +86,7 @@ export default function App() {
 
           <Route path="/signup" element={<Signup />} />
           <Route path="/find" element={<Placeholder title="ID/비밀번호 찾기" />} />
-          <Route path="/check" element={<Placeholder title="예약 확인" />} />
+          <Route path="/check" element={<Check/>} />
           <Route
             path="/reserve"
             element={
@@ -98,7 +100,7 @@ export default function App() {
             path="/cancel"
             element={
               <ProtectedRoute>
-                <Placeholder title="예약 취소" />
+                <Cancel />
               </ProtectedRoute>
             }
           />

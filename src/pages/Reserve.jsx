@@ -1,11 +1,15 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useCallback } from "react";
 import { Link } from "react-router-dom";
+import { supabase } from "../lib/supabase";
+import TimePicker15AmPm from "./TimePicker.jsx"
 
 import "../App.css";
+import "./Reserve.css"
 
-
-function pad2(n) {
-  return String(n).padStart(2, "0");
+function addDaysKey(date, days) {
+  const d = new Date(date);
+  d.setDate(d.getDate() + days);
+  return ymd(d);
 }
 
 function formatDuration(min) {
@@ -14,274 +18,6 @@ function formatDuration(min) {
   if (h === 0) return `${m}분`;
   if (m === 0) return `${h}시간`;
   return `${h}시간 ${m}분`;
-}
-
-function addDaysKey(date, days) {
-  const d = new Date(date);
-  d.setDate(d.getDate() + days);
-  return ymd(d);
-}
-
-function clampTimeValue(value) {
-  if (typeof value !== "string" || !value.includes(":")) return "00:00";
-  const [h, m] = value.split(":").map((x) => Number(x));
-  if (!Number.isFinite(h) || !Number.isFinite(m)) return "00:00";
-  const hh = Math.min(23, Math.max(0, h));
-  const allowed = [0, 15, 30, 45];
-  const mm = allowed.includes(m) ? m : 0;
-  return `${pad2(hh)}:${pad2(mm)}`;
-}
-
-function toAmPm(h24) {
-  const isPM = h24 >= 12;
-  const h12 = h24 % 12 === 0 ? 12 : h24 % 12;
-  return { ap: isPM ? "PM" : "AM", h12 };
-}
-
-function to24(ap, h12) {
-  // ap: "AM"|"PM", h12: 1..12
-  if (ap === "AM") return h12 === 12 ? 0 : h12;
-  // PM
-  return h12 === 12 ? 12 : h12 + 12;
-}
-
-function TimePicker15AmPm({
-  value,
-  onChange,
-  disabled = false,
-  placeholder = "시간 선택",
-  min, // optional: "HH:MM"
-}) {
-  const [open, setOpen] = React.useState(false);
-
-  const safeValue = React.useMemo(() => clampTimeValue(value), [value]);
-  const minMin = React.useMemo(() => (min ? timeToMin(min) : -Infinity), [min]);
-
-  const [h24, m] = React.useMemo(() => safeValue.split(":").map(Number), [safeValue]);
-  const { ap, h12 } = React.useMemo(() => toAmPm(h24), [h24]);
-
-  const minutes = React.useMemo(() => [0, 15, 30, 45], []);
-  const hours12 = React.useMemo(() => Array.from({ length: 12 }, (_, i) => i + 1), []);
-  const aps = ["AM", "PM"];
-
-  const wrapRef = React.useRef(null);
-  React.useEffect(() => {
-    if (!open) return;
-    const onDoc = (e) => {
-      if (!wrapRef.current) return;
-      if (!wrapRef.current.contains(e.target)) setOpen(false);
-    };
-    document.addEventListener("mousedown", onDoc);
-    return () => document.removeEventListener("mousedown", onDoc);
-  }, [open]);
-
-  const setTime = (nextAp, nextH12, nextM) => {
-    const hh24 = to24(nextAp, nextH12);
-    const v = `${pad2(hh24)}:${pad2(nextM)}`;
-    if (timeToMin(v) < minMin) return;
-    onChange?.(v);
-  };
-
-  const isDisabledOption = (nextAp, nextH12, nextM) => {
-    const hh24 = to24(nextAp, nextH12);
-    const v = `${pad2(hh24)}:${pad2(nextM)}`;
-    return timeToMin(v) < minMin;
-  };
-
-  
-
-  // 표시용(오전/오후)
-  const displayText = React.useMemo(() => {
-    const labelAp = ap === "AM" ? "오전" : "오후";
-    return `${labelAp} ${h12}:${pad2(m)}`;
-  }, [ap, h12, m]);
-
-  return (
-    <div ref={wrapRef} className="tpWrap" style={{ position: "relative" }}>
-      <button
-        type="button"
-        className="input tpButton"
-        onClick={() => !disabled && setOpen((p) => !p)}
-        disabled={disabled}
-        aria-haspopup="dialog"
-        aria-expanded={open}
-      >
-        {safeValue ? displayText : placeholder}
-        <span style={{ marginLeft: "auto", opacity: 0.7 }}>▾</span>
-      </button>
-
-      {open && (
-        <div
-          className="tpPopup"
-          role="dialog"
-          aria-label="시간 선택"
-          style={{
-            position: "absolute",
-            top: "calc(100% + 8px)",
-            left: 0,
-            zIndex: 50,
-            width: "100%",
-            maxWidth: 420,
-            padding: 10,
-            borderRadius: 12,
-            background: "rgba(20,20,30,0.95)",
-            border: "1px solid rgba(255,255,255,0.10)",
-            boxShadow: "0 10px 30px rgba(0,0,0,0.35)",
-            display: "grid",
-            gridTemplateColumns: "0.8fr 1fr 1fr",
-            gap: 10,
-          }}
-        >
-          {/* AM/PM */}
-          <div>
-            <div style={{ fontSize: 12, opacity: 0.8, marginBottom: 6 }}>오전/오후</div>
-            <div
-              style={{
-                maxHeight: 220,
-                overflow: "auto",
-                borderRadius: 10,
-                border: "1px solid rgba(255,255,255,0.08)",
-              }}
-            >
-              {aps.map((x) => {
-                const active = x === ap;
-                return (
-                  <button
-                    key={x}
-                    type="button"
-                    onClick={() => setTime(x, h12, m)}
-                    className="tpItem"
-                    style={{
-                      width: "100%",
-                      textAlign: "left",
-                      padding: "10px 12px",
-                      background: active ? "rgba(255,255,255,0.10)" : "transparent",
-                      color: "white",
-                      border: "0",
-                      cursor: "pointer",
-                    }}
-                  >
-                    {x === "AM" ? "오전" : "오후"}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* 1~12 */}
-          <div>
-            <div style={{ fontSize: 12, opacity: 0.8, marginBottom: 6 }}>시</div>
-            <div
-              style={{
-                maxHeight: 220,
-                overflow: "auto",
-                borderRadius: 10,
-                border: "1px solid rgba(255,255,255,0.08)",
-              }}
-            >
-              {hours12.map((hh) => {
-                const active = hh === h12;
-                const disAll = minutes.every((mm) => isDisabledOption(ap, hh, mm));
-                return (
-                  <button
-                    key={hh}
-                    type="button"
-                    onClick={() => !disAll && setTime(ap, hh, m)}
-                    disabled={disAll}
-                    className="tpItem"
-                    style={{
-                      width: "100%",
-                      textAlign: "left",
-                      padding: "10px 12px",
-                      background: active ? "rgba(255,255,255,0.10)" : "transparent",
-                      color: disAll ? "rgba(255,255,255,0.35)" : "white",
-                      border: "0",
-                      cursor: disAll ? "not-allowed" : "pointer",
-                      opacity: disAll ? 0.7 : 1,
-                    }}
-                  >
-                    {hh}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* 00/15/30/45 */}
-          <div>
-            <div style={{ fontSize: 12, opacity: 0.8, marginBottom: 6 }}>분</div>
-            <div
-              style={{
-                maxHeight: 220,
-                overflow: "auto",
-                borderRadius: 10,
-                border: "1px solid rgba(255,255,255,0.08)",
-              }}
-            >
-              {minutes.map((mm) => {
-                const active = mm === m;
-                const dis = isDisabledOption(ap, h12, mm);
-                return (
-                  <button
-                    key={mm}
-                    type="button"
-                    onClick={() => !dis && setTime(ap, h12, mm)}
-                    disabled={dis}
-                    className="tpItem"
-                    style={{
-                      width: "100%",
-                      textAlign: "left",
-                      padding: "10px 12px",
-                      background: active ? "rgba(255,255,255,0.10)" : "transparent",
-                      color: dis ? "rgba(255,255,255,0.35)" : "white",
-                      border: "0",
-                      cursor: dis ? "not-allowed" : "pointer",
-                      opacity: dis ? 0.7 : 1,
-                    }}
-                  >
-                    {pad2(mm)}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          <div style={{ gridColumn: "1 / -1", display: "flex", gap: 8, marginTop: 6 }}>
-            <button
-              type="button"
-              onClick={() => setOpen(false)}
-              style={{
-                flex: 1,
-                padding: "10px 12px",
-                borderRadius: 10,
-                background: "rgba(255,255,255,0.08)",
-                color: "white",
-                border: "1px solid rgba(255,255,255,0.10)",
-                cursor: "pointer",
-              }}
-            >
-              닫기
-            </button>
-            <button
-              type="button"
-              onClick={() => setOpen(false)}
-              style={{
-                padding: "10px 12px",
-                borderRadius: 10,
-                background: "rgba(255,255,255,0.14)",
-                color: "white",
-                border: "1px solid rgba(255,255,255,0.10)",
-                cursor: "pointer",
-              }}
-              aria-label="선택 완료"
-            >
-              완료
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
 }
 
 function ymd(date) {
@@ -338,9 +74,33 @@ export default function Reserve() {
   const [monthCursor, setMonthCursor] = useState(
     new Date(today.getFullYear(), today.getMonth(), 1)
   );
+
+  const fetchMonthCounts = async () => {
+    const start = ymd(startOfMonth(monthCursor));
+    const endNext = addDaysKey(endOfMonth(monthCursor), 1);
+  
+    const { data, error } = await supabase
+      .from("reservations")
+      .select("date")
+      .gte("date", start)
+      .lt("date", endNext);
+  
+    if (error) throw error;
+  
+    const counts = {};
+    for (const r of data ?? []) counts[r.date] = (counts[r.date] ?? 0) + 1;
+    setMonthCounts(counts);
+  };
+
+  React.useEffect(() => {
+    let alive = true;
+    fetchMonthCounts();
+    return () => { alive = false; };
+  }, [fetchMonthCounts,monthCursor]);
+
   const [selectedDate, setSelectedDate] = useState(new Date(today));
 
-  // 데모 예약 데이터: { "YYYY-MM-DD": [{startMin,endMin,title}] }
+  /*// 데모 예약 데이터: { "YYYY-MM-DD": [{startMin,endMin,title}] }
   const [demoReservations, setDemoReservations] = useState(() => {
     const k = ymd(today);
     return {
@@ -348,7 +108,7 @@ export default function Reserve() {
         { startMin: 19 * 60, endMin: 20 * 60 + 30, title: "예시 예약" , verified: true},
       ],
     };
-  });
+  });*/
 
   const [form, setForm] = useState({
     start: "19:00",
@@ -356,6 +116,10 @@ export default function Reserve() {
     title: "",
   });
   const [error, setError] = useState("");
+
+  const [serverReservations, setServerReservations] = useState([]); // 선택 날짜의 예약 목록
+  const [loadingResv, setLoadingResv] = useState(false);
+  const [monthCounts, setMonthCounts] = useState({}); // { "YYYY-MM-DD": number }
 
   const days = useMemo(() => buildCalendarDays(monthCursor), [monthCursor]);
   const year = monthCursor.getFullYear();
@@ -367,10 +131,41 @@ export default function Reserve() {
   const isSameMonth = (d) => d.getMonth() === monthCursor.getMonth();
 
   const selectedKey = ymd(selectedDate);
-  const reservationsForDay = useMemo(() => {
-    const arr = demoReservations[selectedKey] ?? [];
-    return [...arr].sort((a, b) => a.startMin - b.startMin);
-  }, [demoReservations, selectedKey]);
+  const fetchReservations = useCallback(async () => {
+    setLoadingResv(true);
+    setError("");
+  
+    const { data, error } = await supabase
+      .from("reservation_with_profile")
+      .select("id, date, start_min, end_min, title, verified, user_label")
+      .eq("date", selectedKey)
+      .order("start_min", { ascending: true });
+  
+    if (error) {
+      setError("예약 정보를 불러오지 못했습니다.");
+      setServerReservations([]);
+    } else {
+      setServerReservations(
+        (data ?? []).map((r) => ({
+          id: r.id,
+          startMin: r.start_min,
+          endMin: r.end_min,
+          title: r.title,
+          verified: r.verified,
+          user_label: r.user_label,
+        }))
+      );
+    }
+  
+    setLoadingResv(false);
+  }, [selectedKey]);
+  
+  React.useEffect(() => {
+    fetchReservations();
+  }, [fetchReservations]);
+
+  const reservationsForDay = serverReservations;
+  
 
   const onChange = (e) => {
     setError("");
@@ -378,7 +173,26 @@ export default function Reserve() {
     setForm((p) => ({ ...p, [name]: value }));
   };
 
-  const handleReserve = (e) => {
+  const fetchReservationsForSelectedDay = async (dayKey) => {
+    const { data, error } = await supabase
+      .from("reservation_with_profile")
+      .select("id, date, start_min, end_min, title, verified, user_label")
+      .eq("date", dayKey)
+      .order("start_min", { ascending: true });
+  
+    if (error) throw error;
+  
+    return (data ?? []).map((r) => ({
+      id: r.id,
+      startMin: r.start_min,
+      endMin: r.end_min,
+      title: r.title,
+      verified: r.verified,
+      user_label: r.user_label
+    }));
+  };
+
+  const handleReserve = async (e) => {
     e.preventDefault();
     setError("");
   
@@ -410,63 +224,75 @@ export default function Reserve() {
   
     // 2일차 구간(자정 넘을 때)
     const part2Start = 0;
-    const part2End = crossesMidnight ? (endTotal - 24 * 60) : 0;
+    const part2End = crossesMidnight ? endTotal - 24 * 60 : 0;
   
-    // 예약 배열
-    const day1Arr = demoReservations[day1] ?? [];
-    const day2Arr = demoReservations[day2] ?? [];
-  
-    // 겹침 검사
-    const conflictDay1 = day1Arr.some((r) =>
-      overlaps(part1Start, part1End, r.startMin, r.endMin)
-    );
-    if (conflictDay1) {
-      setError("해당 시간대는 이미 예약이 있습니다. 다른 시간을 선택해 주세요.");
-      return;
-    }
-  
-    if (crossesMidnight) {
-      const conflictDay2 = day2Arr.some((r) =>
-        overlaps(part2Start, part2End, r.startMin, r.endMin)
+    // ✅ 충돌 검사: DB에서 해당 날짜 예약을 불러와서 검사
+    try {
+      const day1Existing = await fetchReservationsForSelectedDay(day1);
+      const conflictDay1 = day1Existing.some((r) =>
+        overlaps(part1Start, part1End, r.startMin, r.endMin)
       );
-      if (conflictDay2) {
-        setError("다음날(자정 이후) 시간대에 이미 예약이 있습니다. 다른 시간을 선택해 주세요.");
+      if (conflictDay1) {
+        setError("해당 시간대는 이미 예약이 있습니다. 다른 시간을 선택해 주세요.");
         return;
       }
-    }
   
-    const title = form.title.trim() || "예약";
-  
-    setDemoReservations((prev) => {
-      const next = { ...prev };
-  
-      // day1 저장
-      const a1 = next[day1] ? [...next[day1]] : [];
-      a1.push({
-        startMin: part1Start,
-        endMin: part1End,
-        title: crossesMidnight ? `${title} (익일 포함)` : title,
-        verified: false,
-      });
-      next[day1] = a1;
-  
-      // day2 저장
-      if (crossesMidnight && part2End > 0) {
-        const a2 = next[day2] ? [...next[day2]] : [];
-        a2.push({
-          startMin: part2Start,
-          endMin: part2End,
-          title: `${title} (전날부터)`,
-          verified: false,
-        });
-        next[day2] = a2;
+      if (crossesMidnight) {
+        const day2Existing = await fetchReservationsForSelectedDay(day2);
+        const conflictDay2 = day2Existing.some((r) =>
+          overlaps(part2Start, part2End, r.startMin, r.endMin)
+        );
+        if (conflictDay2) {
+          setError("다음날(자정 이후) 시간대에 이미 예약이 있습니다. 다른 시간을 선택해 주세요.");
+          return;
+        }
       }
   
-      return next;
-    });
+      const title = form.title.trim() || "예약";
   
-    setForm((p) => ({ ...p, title: "" }));
+      const { data: { user }, error } = await supabase.auth.getUser();
+      // ✅ DB insert (자정 넘김이면 2건 insert)
+      const rows = [
+        {
+          date: day1,
+          start_min: part1Start,
+          end_min: part1End,
+          title: crossesMidnight ? `${title} (익일 포함)` : title,
+          verified: false,
+          user_id: user.id,
+        },
+      ];
+  
+      if (crossesMidnight && part2End > 0) {
+        rows.push({
+          date: day2,
+          start_min: part2Start,
+          end_min: part2End,
+          title: `${title} (전날부터)`,
+          verified: false,
+          user_id: user.id,
+        });
+      }
+  
+      const { error: insErr } = await supabase.from("reservations").insert(rows);
+      if (insErr) throw insErr;
+  
+      // ✅ 입력칸 초기화
+      setForm((p) => ({ ...p, title: "" }));
+  
+      // ✅ 화면 갱신: 선택 날짜(day1) 다시 불러오기
+      //const refreshed = await fetchReservationsForSelectedDay(day1);
+      await fetchReservations();
+      await fetchMonthCounts();
+      //setServerReservations(refreshed); // ← 아래 3) 참고
+  
+    } catch (err) {
+      console.error(err);
+      setError("예약 저장에 실패했습니다. (RLS/테이블/네트워크를 확인하세요)");
+    }
   };
+
+  
   
 
   const durationOptions = useMemo(() => {
@@ -527,7 +353,7 @@ export default function Reserve() {
 
                 const isPast = d < startOfToday;
 
-                const count = (demoReservations[key] ?? []).length;
+                const count = monthCounts[key] ?? 0;
 
                 return (
                   <button
@@ -575,7 +401,7 @@ export default function Reserve() {
                         </div>
 
                         <div className="reserveTitleRow">
-                          <span className="reserveTitle">{r.title}</span>
+                          <span className="reserveTitle">{r.title+" ("+r.user_label+")"}</span>
 
                           {r.verified && (
                             <span className="verifiedBadge" title="확인된 예약">
