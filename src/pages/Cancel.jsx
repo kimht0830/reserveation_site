@@ -33,7 +33,6 @@ function buildCalendarDays(monthDate) {
 
   const gridStart = new Date(start);
   gridStart.setDate(start.getDate() - start.getDay());
-
   const gridEnd = new Date(end);
   gridEnd.setDate(end.getDate() + (6 - end.getDay()));
 
@@ -57,13 +56,35 @@ function minToTime(min) {
 export default function Cancel() {
   const today = new Date();
 
-  /* ---------- auth ---------- */
+  /* ---------- auth / role ---------- */
   const [myUserId, setMyUserId] = useState(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [authReady, setAuthReady] = useState(false);
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      setMyUserId(data?.user?.id ?? null);
-    });
+    async function fetchAuth() {
+      const { data: { user } } = await supabase.auth.getUser();
+
+      if (!user) {
+        setMyUserId(null);
+        setIsAdmin(false);
+        setAuthReady(true);
+        return;
+      }
+
+      setMyUserId(user.id);
+
+      const { data } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .single();
+
+      setIsAdmin(data?.role === "admin");
+      setAuthReady(true);
+    }
+
+    fetchAuth();
   }, []);
 
   /* ---------- calendar ---------- */
@@ -77,106 +98,110 @@ export default function Cancel() {
   const month = monthCursor.getMonth();
   const selectedKey = ymd(selectedDate);
 
-  const goPrevMonth = () =>
-    setMonthCursor(new Date(year, month - 1, 1));
-  const goNextMonth = () =>
-    setMonthCursor(new Date(year, month + 1, 1));
+  const goPrevMonth = () => setMonthCursor(new Date(year, month - 1, 1));
+  const goNextMonth = () => setMonthCursor(new Date(year, month + 1, 1));
 
-  const isSameMonth = (d) =>
-    d.getMonth() === monthCursor.getMonth();
+  const isSameMonth = (d) => d.getMonth() === monthCursor.getMonth();
 
-  /* ---------- month counts (내 예약 개수) ---------- */
-  const [monthCounts, setMonthCounts] = useState({}); // {date: count}
+  /* ---------- month counts ---------- */
+  const [monthCounts, setMonthCounts] = useState({});
 
-  const fetchMyMonthCounts = useCallback(async () => {
-    if (!myUserId) return;
-
+  const fetchMonthCounts = useCallback(async () => {
     const start = ymd(startOfMonth(monthCursor));
     const endNext = addDaysKey(endOfMonth(monthCursor), 1);
 
-    const { data, error } = await supabase
+    let query = supabase
       .from("reservations")
       .select("date")
-      .eq("user_id", myUserId)
       .gte("date", start)
       .lt("date", endNext);
 
-    if (error) return;
+    if (!isAdmin) query = query.eq("user_id", myUserId);
+
+    const { data, error } = await query;
+    if (error) {
+      console.error(error);
+      return;
+    }
 
     const counts = {};
-    for (const r of data ?? []) {
-      counts[r.date] = (counts[r.date] ?? 0) + 1;
-    }
+    for (const r of data ?? []) counts[r.date] = (counts[r.date] ?? 0) + 1;
     setMonthCounts(counts);
-  }, [monthCursor, myUserId]);
+  }, [monthCursor, myUserId, isAdmin]);
 
   useEffect(() => {
-    fetchMyMonthCounts();
-  }, [fetchMyMonthCounts]);
+    if (!authReady) return;
+    if (!isAdmin && !myUserId) return;
+    fetchMonthCounts();
+  }, [authReady, isAdmin, myUserId, fetchMonthCounts]);
 
   /* ---------- reservations ---------- */
-  const [myReservations, setMyReservations] = useState([]);
+  const [reservations, setReservations] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  /* 방법 1️⃣: 달력 날짜 클릭 */
   const fetchByDate = useCallback(async () => {
-    if (!myUserId) return;
-
     setLoading(true);
     setError("");
 
-    const { data, error } = await supabase
+    let query = supabase
       .from("reservation_with_profile")
-      .select(
-        "id, date, start_min, end_min, title, verified, user_label, user_id"
-      )
-      .eq("user_id", myUserId)
+      .select("id, date, start_min, end_min, title, verified, user_label, user_id")
       .eq("date", selectedKey)
       .order("start_min", { ascending: true });
 
+    if (!isAdmin) query = query.eq("user_id", myUserId);
+
+    const { data, error } = await query;
+
     if (error) {
+      console.error(error);
       setError("예약을 불러오지 못했습니다.");
-      setMyReservations([]);
+      setReservations([]);
     } else {
-      setMyReservations(data ?? []);
+      setReservations(data ?? []);
     }
 
     setLoading(false);
-  }, [myUserId, selectedKey]);
+  }, [selectedKey, myUserId, isAdmin]);
 
   useEffect(() => {
+    if (!authReady) return;
+    if (!isAdmin && !myUserId) return;
     fetchByDate();
-  }, [fetchByDate]);
+  }, [authReady, isAdmin, myUserId, fetchByDate]);
 
-  /* 방법 2️⃣: 날짜 범위 검색 */
+  /* ---------- range search ---------- */
   const [range, setRange] = useState({
     from: ymd(today),
     to: ymd(today),
   });
 
   const fetchByRange = async () => {
-    if (!myUserId) return;
+    if (!authReady) return;
+    if (!isAdmin && !myUserId) return;
 
     setLoading(true);
     setError("");
 
-    const { data, error } = await supabase
+    let query = supabase
       .from("reservation_with_profile")
-      .select(
-        "id, date, start_min, end_min, title, verified, user_label, user_id"
-      )
-      .eq("user_id", myUserId)
+      .select("id, date, start_min, end_min, title, verified, user_label, user_id")
       .gte("date", range.from)
       .lte("date", range.to)
       .order("date", { ascending: true })
       .order("start_min", { ascending: true });
 
+    if (!isAdmin) query = query.eq("user_id", myUserId);
+
+    const { data, error } = await query;
+
     if (error) {
+      console.error(error);
       setError("예약을 불러오지 못했습니다.");
-      setMyReservations([]);
+      setReservations([]);
     } else {
-      setMyReservations(data ?? []);
+      setReservations(data ?? []);
     }
 
     setLoading(false);
@@ -186,27 +211,41 @@ export default function Cancel() {
   const cancelReservation = async (id) => {
     if (!window.confirm("이 예약을 취소할까요?")) return;
 
-    const { error } = await supabase
+    let query = supabase
       .from("reservations")
       .delete()
-      .eq("id", id)
-      .eq("user_id", myUserId);
+      .eq("id", id);
+
+    if (!isAdmin) query = query.eq("user_id", myUserId);
+
+    const { error } = await query;
 
     if (error) {
+      console.error(error);
       alert("취소 실패");
-    } else {
-      setMyReservations((prev) => prev.filter((r) => r.id !== id));
-      fetchMyMonthCounts(); // 달력 숫자 갱신
+      return;
     }
+
+    setReservations((prev) => prev.filter((r) => r.id !== id));
+    fetchMonthCounts();
   };
 
   /* ================= render ================= */
 
-  const startOfToday = new Date(
-    today.getFullYear(),
-    today.getMonth(),
-    today.getDate()
-  );
+  if (!authReady) {
+    return (
+      <div className="page">
+        <header className="topbar">
+          <Link to="/" className="loginBackBtn">← 홈</Link>
+        </header>
+        <main className="hero">
+          <div className="emptyText">불러오는 중...</div>
+        </main>
+      </div>
+    );
+  }
+
+  const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
 
   return (
     <div className="page">
@@ -221,7 +260,7 @@ export default function Cancel() {
 
       <main className="hero">
         <div className="reserveLayout2">
-          {/* 상단 달력 */}
+          {/* 달력 */}
           <div className="calendarCard">
             <div className="dowRow">
               {["일","월","화","수","목","금","토"].map((d) => (
@@ -240,7 +279,7 @@ export default function Cancel() {
                 return (
                   <button
                     key={key}
-                    className={`dayCellCompact ${dim?"dim":""} ${isPast?"past":""} ${isSel?"selected":""}`}
+                    className={`dayCellCompact ${dim ? "dim" : ""} ${isPast ? "past" : ""} ${isSel ? "selected" : ""}`}
                     onClick={() => setSelectedDate(d)}
                   >
                     <div className="dayTopRow">
@@ -255,10 +294,10 @@ export default function Cancel() {
 
           {/* 하단 */}
           <div className="bottomSplit">
-            {/* 좌: 내 예약 */}
+            {/* 좌: 예약 목록 */}
             <div className="panelCard">
               <div className="panelHeader">
-                <div className="panelTitle">내 예약</div>
+                <div className="panelTitle">{isAdmin ? "전체 예약" : "내 예약"}</div>
                 <div className="panelSub">{selectedKey}</div>
               </div>
 
@@ -266,12 +305,15 @@ export default function Cancel() {
                 <div className="emptyText">불러오는 중...</div>
               ) : error ? (
                 <div className="errorText">{error}</div>
-              ) : myReservations.length === 0 ? (
+              ) : reservations.length === 0 ? (
                 <div className="emptyText">예약이 없습니다.</div>
               ) : (
                 <div className="reserveList">
-                  {myReservations.map((r) => (
-                    <div key={r.id} className="reserveItem myReserve">
+                  {reservations.map((r) => (
+                    <div
+                      key={r.id}
+                      className={`reserveItem ${r.user_id === myUserId ? "myReserve" : ""}`}
+                    >
                       <div className="reserveTime">
                         {r.date} · {minToTime(r.start_min)} ~ {minToTime(r.end_min)}
                       </div>
@@ -281,16 +323,14 @@ export default function Cancel() {
                           {r.title} ({r.user_label})
                         </span>
 
-                        {!r.verified && (
-                          <button
-                            className="cancelBtn"
-                            onClick={() => cancelReservation(r.id)}
-                          >
-                            취소
-                          </button>
-                        )}
-
                         {r.verified && <span className="verifiedBadge">✓</span>}
+
+                        <button
+                          className="cancelBtn"
+                          onClick={() => cancelReservation(r.id)}
+                        >
+                          취소
+                        </button>
                       </div>
                     </div>
                   ))}
@@ -302,7 +342,9 @@ export default function Cancel() {
             <div className="panelCard">
               <div className="panelHeader">
                 <div className="panelTitle">범위 조회</div>
-                <div className="panelSub">내 예약 검색</div>
+                <div className="panelSub">
+                  {isAdmin ? "전체 예약 검색" : "내 예약 검색"}
+                </div>
               </div>
 
               <label className="field">
@@ -311,9 +353,7 @@ export default function Cancel() {
                   type="date"
                   className="input"
                   value={range.from}
-                  onChange={(e) =>
-                    setRange((p) => ({ ...p, from: e.target.value }))
-                  }
+                  onChange={(e) => setRange((p) => ({ ...p, from: e.target.value }))}
                 />
               </label>
 
@@ -323,9 +363,7 @@ export default function Cancel() {
                   type="date"
                   className="input"
                   value={range.to}
-                  onChange={(e) =>
-                    setRange((p) => ({ ...p, to: e.target.value }))
-                  }
+                  onChange={(e) => setRange((p) => ({ ...p, to: e.target.value }))}
                 />
               </label>
 

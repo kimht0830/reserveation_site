@@ -1,9 +1,11 @@
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useMemo, useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 
 import "../App.css";
-import "./Reserve.css"; // ✅ 기존 Reserve.css 그대로 재사용
+import "./Reserve.css";
+
+/* ================= util ================= */
 
 function addDaysKey(date, days) {
   const d = new Date(date);
@@ -30,10 +32,9 @@ function buildCalendarDays(monthDate) {
   const end = endOfMonth(monthDate);
 
   const gridStart = new Date(start);
-  gridStart.setDate(start.getDate() - start.getDay()); // Sun
-
+  gridStart.setDate(start.getDate() - start.getDay());
   const gridEnd = new Date(end);
-  gridEnd.setDate(end.getDate() + (6 - end.getDay())); // Sat
+  gridEnd.setDate(end.getDate() + (6 - end.getDay()));
 
   const days = [];
   const cur = new Date(gridStart);
@@ -44,68 +45,95 @@ function buildCalendarDays(monthDate) {
   return days;
 }
 
-// minutes -> "HH:MM"
 function minToTime(min) {
   const h = String(Math.floor(min / 60)).padStart(2, "0");
   const m = String(min % 60).padStart(2, "0");
   return `${h}:${m}`;
 }
 
-export default function Check() {
+/* ================= component ================= */
 
-    const [myUserId, setMyUserId] = useState(null);
-    React.useEffect(() => {
-        supabase.auth.getUser().then(({ data }) => {
-          setMyUserId(data?.user?.id ?? null);
-        });
-      }, []);
+export default function Check() {
   const today = new Date();
 
+  /* ---------- auth / role ---------- */
+  const [myUserId, setMyUserId] = useState(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    async function fetchUserAndRole() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      setMyUserId(user.id);
+
+      const { data } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .single();
+
+      if (data?.role === "admin") {
+        setIsAdmin(true);
+      }
+    }
+
+    fetchUserAndRole();
+  }, []);
+
+  /* ---------- calendar ---------- */
   const [monthCursor, setMonthCursor] = useState(
     new Date(today.getFullYear(), today.getMonth(), 1)
   );
-  const [selectedDate, setSelectedDate] = useState(new Date(today));
-  const [monthCounts, setMonthCounts] = useState({}); // { "YYYY-MM-DD": number }
-
-  const [serverReservations, setServerReservations] = useState([]); // 선택 날짜 예약
-  const [loadingResv, setLoadingResv] = useState(false);
-  const [error, setError] = useState("");
+  const [selectedDate, setSelectedDate] = useState(today);
+  const selectedKey = ymd(selectedDate);
 
   const days = useMemo(() => buildCalendarDays(monthCursor), [monthCursor]);
   const year = monthCursor.getFullYear();
   const month = monthCursor.getMonth();
-  const selectedKey = ymd(selectedDate);
 
-  const goPrevMonth = () => setMonthCursor(new Date(year, month - 1, 1));
-  const goNextMonth = () => setMonthCursor(new Date(year, month + 1, 1));
-  const isSameMonth = (d) => d.getMonth() === monthCursor.getMonth();
+  const goPrevMonth = () =>
+    setMonthCursor(new Date(year, month - 1, 1));
+  const goNextMonth = () =>
+    setMonthCursor(new Date(year, month + 1, 1));
+  //const isSameMonth = (d) => d.getMonth() === monthCursor.getMonth();
 
-  // 지난 날짜 흐리게(+클릭 막기) - Reserve.jsx와 동일 컨셉 :contentReference[oaicite:1]{index=1}
-  const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const startOfToday = new Date(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate()
+  );
+
+  /* ---------- month badge counts ---------- */
+  const [monthCounts, setMonthCounts] = useState({});
 
   const fetchMonthCounts = useCallback(async () => {
     const start = ymd(startOfMonth(monthCursor));
     const endNext = addDaysKey(endOfMonth(monthCursor), 1);
 
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from("reservations")
       .select("date")
       .gte("date", start)
       .lt("date", endNext);
 
-    if (error) throw error;
-
     const counts = {};
-    for (const r of data ?? []) counts[r.date] = (counts[r.date] ?? 0) + 1;
+    for (const r of data ?? []) {
+      counts[r.date] = (counts[r.date] ?? 0) + 1;
+    }
     setMonthCounts(counts);
   }, [monthCursor]);
 
-  React.useEffect(() => {
-    fetchMonthCounts().catch((e) => console.error(e));
+  useEffect(() => {
+    fetchMonthCounts();
   }, [fetchMonthCounts]);
 
-  // 선택 날짜 예약 불러오기 (Reserve.jsx의 fetchReservations 로직 유지) :contentReference[oaicite:2]{index=2}
-  React.useEffect(() => {
+  /* ---------- reservations ---------- */
+  const [serverReservations, setServerReservations] = useState([]);
+  const [loadingResv, setLoadingResv] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
     let alive = true;
 
     async function fetchReservations() {
@@ -114,7 +142,9 @@ export default function Check() {
 
       const { data, error } = await supabase
         .from("reservation_with_profile")
-        .select("id, date, start_min, end_min, title, verified, user_label, user_id")
+        .select(
+          "id, date, start_min, end_min, title, verified, user_label, user_id"
+        )
         .eq("date", selectedKey)
         .order("start_min", { ascending: true });
 
@@ -142,51 +172,69 @@ export default function Check() {
     }
 
     fetchReservations();
-
     return () => {
       alive = false;
     };
   }, [selectedKey]);
 
-  
+  /* ---------- admin: verified toggle ---------- */
+  const toggleVerified = async (id, nextValue) => {
+    if (!isAdmin) return;
+
+    const { error } = await supabase
+      .from("reservations")
+      .update({ verified: nextValue })
+      .eq("id", id);
+
+    if (error) {
+      alert("확인 상태 변경 실패");
+      console.error(error);
+      return;
+    }
+
+    setServerReservations((prev) =>
+      prev.map((r) =>
+        r.id === id ? { ...r, verified: nextValue } : r
+      )
+    );
+  };
+
+  /* ================= render ================= */
+
   return (
     <div className="page">
       <header className="topbar">
         <Link to="/" className="loginBackBtn">← 홈</Link>
 
         <div className="monthBar">
-          <button className="navBtn" onClick={goPrevMonth} aria-label="Prev month">◀</button>
+          <button className="navBtn" onClick={goPrevMonth}>◀</button>
           <div className="monthTitle">{year}년 {month + 1}월</div>
-          <button className="navBtn" onClick={goNextMonth} aria-label="Next month">▶</button>
+          <button className="navBtn" onClick={goNextMonth}>▶</button>
         </div>
       </header>
 
       <main className="hero">
         <div className="reserveLayout2">
-          {/* 상단: 달력 */}
+          {/* 달력 */}
           <div className="calendarCard">
             <div className="dowRow">
-              {["일", "월", "화", "수", "목", "금", "토"].map((x) => (
-                <div key={x} className="dowCell">{x}</div>
+              {["일","월","화","수","목","금","토"].map((d) => (
+                <div key={d} className="dowCell">{d}</div>
               ))}
             </div>
 
             <div className="calendarGridCompact">
               {days.map((d) => {
                 const key = ymd(d);
-                const dim = !isSameMonth(d);
                 const isSel = key === selectedKey;
                 const isPast = d < startOfToday;
-
                 const count = monthCounts[key] ?? 0;
 
                 return (
                   <button
                     key={key}
-                    type="button"
-                    className={`dayCellCompact ${dim ? "dim" : ""} ${isPast ? "past" : ""} ${isSel ? "selected" : ""}`}
+                    className={`dayCellCompact ${isSel?"selected":""} ${isPast?"past":""}`}
                     onClick={() => setSelectedDate(d)}
-                    aria-label={`${key} 선택`}
                   >
                     <div className="dayTopRow">
                       <span className="dayNum">{d.getDate()}</span>
@@ -198,14 +246,14 @@ export default function Check() {
             </div>
           </div>
 
-          {/* 하단: 예약 현황만 */}
+          {/* 예약 목록 */}
           <div className="panelCard">
             <div className="panelHeader">
               <div className="panelTitle">예약 현황</div>
               <div className="panelSub">{selectedKey}</div>
             </div>
 
-            {error && <div className="errorText" role="alert">{error}</div>}
+            {error && <div className="errorText">{error}</div>}
 
             {loadingResv ? (
               <div className="emptyText">불러오는 중...</div>
@@ -213,26 +261,44 @@ export default function Check() {
               <div className="emptyText">예약이 없습니다.</div>
             ) : (
               <div className="reserveList">
-                {serverReservations.map((r) => {const isMine = myUserId && r.user_id === myUserId;
-                return (    
-                  <div key={r.id} className={`reserveItem ${isMine ? "myReserve" : ""}`}>
-                    <div className="reserveTime">
-                      {minToTime(r.startMin)} ~ {minToTime(r.endMin)}
-                    </div>
+                {serverReservations.map((r) => {
+                  const isMine = myUserId && r.user_id === myUserId;
 
-                    <div className="reserveTitleRow">
-                      <span className="reserveTitle">{r.title+" ("+r.user_label+")"}</span>
-                      {r.verified && (
-                        <span className="verifiedBadge" title="확인된 예약">✓</span>
-                      )}
+                  return (
+                    <div
+                      key={r.id}
+                      className={`reserveItem ${isMine ? "myReserve" : ""}`}
+                    >
+                      <div className="reserveTime">
+                        {minToTime(r.startMin)} ~ {minToTime(r.endMin)}
+                      </div>
+
+                      <div className="reserveTitleRow">
+                        <span className="reserveTitle">
+                          {r.title} ({r.user_label})
+                        </span>
+
+                        {r.verified && (
+                          <span className="verifiedBadge">✓</span>
+                        )}
+
+                        {isAdmin && (
+                          <button
+                            className={`verifyBtn ${r.verified ? "on" : "off"}`}
+                            onClick={() =>
+                              toggleVerified(r.id, !r.verified)
+                            }
+                          >
+                            {r.verified ? "확인 취소" : "확인"}
+                          </button>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                )})
-            }
+                  );
+                })}
               </div>
             )}
           </div>
-
         </div>
       </main>
     </div>

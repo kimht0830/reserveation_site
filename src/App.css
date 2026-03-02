@@ -10,74 +10,85 @@ body {
 
 /* 배경 + 레이아웃 */
 .page {
+ 
   min-height: 100vh;
-  background:
-    radial-gradient(1200px 600px at 20% 10%, rgba(99, 102, 241, 0.22), transparent 55%),
-    radial-gradient(900px 500px at 80% 30%, rgba(16, 185, 129, 0.18), transparent 55%),
-    radial-gradient(900px 500px at 50% 90%, rgba(244, 63, 94, 0.12), transparent 60%),
-    #0b1020;
   display: flex;
   flex-direction: column;
+  background-color: #ffffff; 
+  background-image: 
+    /* 빨강: 왼쪽 위에서 선명하게 */
+    radial-gradient(circle at 15% 20%, rgba(255, 107, 129, 0.3) 0%, transparent 50%),
+    /* 파랑: 오른쪽 위에서 깊이감 있게 */
+    radial-gradient(circle at 85% 15%, rgba(64, 115, 255, 0.25) 0%, transparent 50%),
+    /* 보라: 오른쪽 아래에서 화사하게 */
+    radial-gradient(circle at 80% 85%, rgba(162, 89, 255, 0.25) 0%, transparent 50%),
+    /* 하늘색: 왼쪽 아래에서 청량하게 */
+    radial-gradient(circle at 20% 80%, rgba(0, 210, 255, 0.2) 0%, transparent 50%);
+  background-attachment: fixed;
+}
+
+.hero {
+  flex: 1;
+  display: grid;
+  place-items: center; /* 카드를 중앙에 배치 */
+  padding: 2rem;
 }
 
 /* 우상단 로그인: 높이/패딩/글자 크기를 뷰포트 기반 + clamp로 제어 */
 .topbar {
-  height: clamp(3.2rem, 7vh, 4.6rem);
-  padding: clamp(0.6rem, 1.8vh, 1.2rem) clamp(0.8rem, 2vw, 1.3rem);
-  display: flex;
-  justify-content: flex-end;
+  width: 100%;             /* 전체 너비 확보 */
+  display: flex !important; /* 강제로 flex 적용 */
+  justify-content: flex-end; /* 오른쪽 정렬 */
   align-items: center;
+  padding: 1.5rem 3rem;     /* 충분한 여백 */
+  box-sizing: border-box;
 }
 
 .loginBtn {
   font-size: clamp(0.75rem, 1.6vw, 0.9rem);
-  text-decoration: none;
-  color: rgba(255,255,255,0.92);
-  padding: clamp(0.45rem, 1.2vh, 0.65rem) clamp(0.7rem, 2vw, 0.95rem);
-  border-radius: 999px;
-  border: 1px solid rgba(255,255,255,0.18);
-  background: rgba(255,255,255,0.06);
-  backdrop-filter: blur(10px);
-  transition: transform 0.12s ease, background 0.12s ease, border-color 0.12s ease;
+  background: rgba(255, 255, 255, 0.6);
+  color: #4A4E69; /*#4F46E5; /* 인디고 블루 포인트 */
+  justify-content: flex-end;
+  border: 1px solid rgba(79, 70, 229, 0.2);
+  font-weight: 600;
+  padding: 0.6rem 1.2rem;
+  border-radius: 13px;
+  transition: all 0.2s;
 }
 .loginBtn:hover {
-  transform: translateY(-0.2vh);
-  background: rgba(255,255,255,0.10);
-  border-color: rgba(255,255,255,0.26);
+  
+  background: #5a60ff;
+  color: #ffffff !important;
+  transform: scale(1.05);
+
 }
 
-/* 중앙 영역 */
-.hero {
-  flex: 1;
-  display: grid;
-  place-items: center;
-  padding: clamp(1rem, 3vw, 2.2rem);
-}
+
 
 /* 카드: 폭은 뷰포트 너비 비율로, 너무 커지지 않게 clamp */
 .heroCard {
-  width: clamp(18rem, 80vw, 36rem);
-  padding: clamp(1.1rem, 3.5vw, 2.2rem);
-  border-radius: clamp(1rem, 2.2vw, 1.4rem);
-  border: 1px solid rgba(255,255,255,0.14);
-  background: rgba(255,255,255,0.06);
-  box-shadow: 0 2.5vh 6vh rgba(0,0,0,0.35);
-  backdrop-filter: blur(12px);
+  width: clamp(18rem, 80vw, 32rem);
+  padding: 2.5rem 2rem;
+  border-radius: 2rem;
+  /* 밝은 유리 효과: 배경을 하얀색 투명으로 */
+  background: rgba(255, 255, 255, 0.4);
+  backdrop-filter: blur(25px); /* 뒤 배경을 더 부드럽게 뭉갬 */
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.05); /* 그림자는 아주 연하게 */
   text-align: center;
+  transition: transform 0.4s ease;
 }
 
 .title {
-  margin: 0 0 clamp(0.35rem, 1vh, 0.6rem);
-  font-size: clamp(1.6rem, 4.4vw, 2.25rem);
-  line-height: 1.1;
-  color: rgba(255,255,255,0.96);
-  letter-spacing: -0.02em;
+  color: #4A4E69; /* 진한 회색/보라색 계열로 가독성 확보 */
+  font-weight: 800;
+  margin-bottom: 0.5rem;
 }
 
 .subtitle {
   margin: 0 0 clamp(1rem, 2.6vh, 1.4rem);
   font-size: clamp(0.85rem, 2.2vw, 1rem);
-  color: rgba(255,255,255,0.72);
+  color: #6B7280;
 }
 
 /* 버튼 3개: 높이를 vh 기반으로 + clamp로 제한 */
@@ -104,32 +115,38 @@ body {
 
   border-radius: clamp(0.85rem, 2.4vw, 1.1rem);
   border: 1px solid rgba(255,255,255,0.16);
-  background: rgba(255,255,255,0.08);
+  background: #C1ACEA;
 
-  transition: transform 0.12s ease, background 0.12s ease, border-color 0.12s ease;
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); /* 부드러운 움직임 */
+  position: relative;
+  overflow: hidden;
 }
 .mainBtn:hover {
-  transform: translateY(-0.2vh);
-  background: rgba(255,255,255,0.12);
-  border-color: rgba(255,255,255,0.25);
+
+  transform: translateY(-5px); /* 위로 띄우기 */
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1); /* 그림자로 입체감 부여 */
+  filter: brightness(1.05); /* 살짝 더 밝게 */
+  background: #8da2ff;
 }
 
 .mainBtn.primary {
-  background: rgba(99, 102, 241, 0.22);
-  border-color: rgba(99, 102, 241, 0.35);
+  background: #9370DB;
+  /* border-color: rgba(99, 102, 241, 0.35); */
+  color : #FFFFFF;
 }
 .mainBtn.primary:hover {
-  background: rgba(99, 102, 241, 0.28);
-  border-color: rgba(99, 102, 241, 0.45);
+  background: #6D7AF2;
+  box-shadow: 0 12px 24px rgba(105, 110, 255, 0.3);
+  
 }
 
 .mainBtn.danger {
-  background: rgba(244, 63, 94, 0.18);
+  background: #FF9999;
   border-color: rgba(244, 63, 94, 0.30);
 }
 .mainBtn.danger:hover {
-  background: rgba(244, 63, 94, 0.24);
-  border-color: rgba(244, 63, 94, 0.42);
+  background: #ff7d7d;
+  box-shadow: 0 12px 24px rgba(252, 165, 165, 0.4);
 }
 
 /* 임시 페이지 스타일도 비율 기반 */
@@ -166,18 +183,21 @@ body {
   margin: 0 0 clamp(0.35rem, 1vh, 0.6rem);
   font-size: clamp(1.4rem, 4vw, 2rem);
   color: rgba(255,255,255,0.96);
+  color: #1e293b; 
+  font-weight: 800;
 }
 
 .authSubtitle {
   margin: 0 0 clamp(1rem, 2.6vh, 1.4rem);
   font-size: clamp(0.85rem, 2.2vw, 1rem);
-  color: rgba(255,255,255,0.72);
+  color: #475569;
 }
 
 .authForm {
   display: grid;
   gap: clamp(0.7rem, 2vh, 1rem);
 }
+
 
 .field {
   display: grid;
@@ -186,7 +206,8 @@ body {
 
 .labelText {
   font-size: clamp(0.8rem, 2.1vw, 0.95rem);
-  color: rgba(255,255,255,0.82);
+  color: #334155;
+  font-weight: 600;
 }
 
 .input {
@@ -194,14 +215,14 @@ body {
   height: clamp(2.7rem, 6.5vh, 3.2rem);
   padding: 0 clamp(0.9rem, 2.4vw, 1.1rem);
   border-radius: clamp(0.85rem, 2.2vw, 1.1rem);
-  border: 1px solid rgba(255,255,255,0.14);
-  background: rgba(255,255,255,0.08);
-  color: rgba(255,255,255,0.92);
   outline: none;
+  color: #1e293b;
+  background: rgba(255, 255, 255, 0.6); /* 입력창 배경도 조금 더 밝게 */
+  border: 1px solid rgba(0, 0, 0, 0.1); /* 테두리를 살짝 선명하게 */
 }
 
 .input::placeholder {
-  color: rgba(255,255,255,0.45);
+  color: #94a3b8;
 }
 
 .input:focus {
@@ -239,11 +260,14 @@ body {
   align-items: center;
   justify-content: center;
   gap: 0.7rem;
-  color: rgba(255,255,255,0.65);
+  
+  color: #4f46e5;
+  font-weight: 600;
 }
 
 .authLink {
-  color: rgba(255,255,255,0.86);
+  color: #4f46e5;
+  font-weight: 600;
   text-decoration: none;
   font-size: clamp(0.85rem, 2.2vw, 0.98rem);
 }
@@ -253,14 +277,16 @@ body {
 
 /* 로그인 페이지 상단 '홈' 버튼 */
 .loginBackBtn {
-  font-size: clamp(0.8rem, 2vw, 0.95rem);
+  font-size: clamp(0.75rem, 1.6vw, 0.9rem);
+  background: #ffffff99;
   text-decoration: none;
-  color: rgba(255,255,255,0.88);
-  padding: clamp(0.45rem, 1.2vh, 0.65rem) clamp(0.7rem, 2vw, 0.95rem);
-  border-radius: 999px;
-  border: 1px solid rgba(255,255,255,0.18);
-  background: rgba(255,255,255,0.06);
-  backdrop-filter: blur(10px);
+  color: #4A4E69; /*#4F46E5; /* 인디고 블루 포인트 */
+  justify-content: flex-end;
+  border: 1px solid rgba(79, 70, 229, 0.2);
+  font-weight: 600;
+  padding: 0.6rem 1.2rem;
+  border-radius: 13px;
+  transition: all 0.2s;
 }
 .loginBackBtn:hover {
   background: rgba(255,255,255,0.10);
@@ -275,12 +301,14 @@ body {
 }
 
 .userIdBadge {
-  font-size: clamp(0.75rem, 1.8vw, 0.95rem);
-  color: rgba(255,255,255,0.92);
-  padding: clamp(0.45rem, 1.2vh, 0.65rem) clamp(0.7rem, 2vw, 0.95rem);
-  border-radius: 999px;
-  border: 1px solid rgba(255,255,255,0.18);
-  background: rgba(255,255,255,0.06);
+  font-size: clamp(0.75rem, 1.6vw, 0.9rem);
+  background: rgba(255, 255, 255, 0.6);
+  color: #4A4E69; /*#4F46E5; /* 인디고 블루 포인트 */
+  justify-content: flex-end;
+  border: 1px solid rgba(79, 70, 229, 0.2);
+  font-weight: 600;
+  padding: 0.6rem 1.2rem;
+  border-radius: 13px;
   backdrop-filter: blur(10px);
   max-width: 48vw;
   overflow: hidden;
@@ -289,28 +317,29 @@ body {
 }
 
 .logoutBtn {
-  font-size: clamp(0.75rem, 1.6vw, 0.9rem);
-  color: rgba(255,255,255,0.92);
-  padding: clamp(0.45rem, 1.2vh, 0.65rem) clamp(0.7rem, 2vw, 0.95rem);
-  border-radius: 999px;
-  border: 1px solid rgba(255,255,255,0.18);
-  background: rgba(255,255,255,0.06);
-  backdrop-filter: blur(10px);
   cursor: pointer;
-  transition: transform 0.12s ease, background 0.12s ease, border-color 0.12s ease;
+  font-size: clamp(0.75rem, 1.6vw, 0.9rem);
+  background: rgba(255, 255, 255, 0.6);
+  color: #4A4E69; /*#4F46E5; /* 인디고 블루 포인트 */
+  justify-content: flex-end;
+  border: 1px solid rgba(79, 70, 229, 0.2);
+  font-weight: 600;
+  padding: 0.6rem 1.2rem;
+  border-radius: 13px;
+  transition: all 0.2s;
 }
 
 .logoutBtn:hover {
-  transform: translateY(-0.2vh);
-  background: rgba(255,255,255,0.10);
-  border-color: rgba(255,255,255,0.26);
+  background: #5a60ff;
+  color: #ffffff !important;
+  transform: scale(1.05);
 }
 
 /*회원가입 에셋*/
 /* authLinks 안에서 안내 문구 */
 .mutedText {
   font-size: clamp(0.85rem, 2.2vw, 0.98rem);
-  color: rgba(255,255,255,0.65);
+  color: #64748b;
 }
 
 /* 버튼 disabled 상태 */

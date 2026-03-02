@@ -11,7 +11,7 @@
     border: 1px solid rgba(255,255,255,0.12);
     border-radius: 16px;
     padding: 14px;
-    background: rgba(255,255,255,0.04);
+    background: rgba(255, 255, 255, 0.236);
   }
   
   .monthBar {
@@ -26,14 +26,14 @@
     font-size: 16px;
     padding: 6px 10px;
     border-radius: 10px;
-    background: rgba(255,255,255,0.06);
-    color: #BBB;
+    background: rgba(255, 255, 255, 0.095);
+    color: #5f5f5f;
   }
   
   .navBtn {
     border: 1px solid rgba(255,255,255,0.15);
-    background: rgba(255,255,255,0.06);
-    color: #BBB;
+    background: rgba(255, 255, 255, 0.095);
+    color: #5f5f5f8f;
     padding: 6px 10px;
     border-radius: 10px;
     cursor: pointer;
@@ -44,7 +44,7 @@
     grid-template-columns: repeat(7, 1fr);
     gap: 10px;
     margin-bottom: 10px;
-    color: #BBB;
+    color: #5f5f5f;
   }
   
   .dowCell {
@@ -66,7 +66,7 @@
     border-radius: 14px;
     padding: 10px;
     min-height: 56px;
-    background: rgba(0,0,0,0.14);
+    background: rgba(190, 133, 255, 0.279);
     display: flex;
     flex-direction: column;
     gap: 6px;
@@ -75,7 +75,7 @@
   }
   
   .dayCellCompact:hover {
-    outline: 1px solid rgba(255,255,255,0.25);
+    outline: 1px solid rgba(174, 145, 255, 0.649);
   }
   
   .dayCellCompact.dim {
@@ -83,7 +83,7 @@
   }
   
   .dayCellCompact.selected {
-    outline: 2px solid rgba(255,255,255,0.35);
+    outline: 2px solid rgb(182, 123, 255);
   }
   
   .dayCellCompact.past {
@@ -101,15 +101,16 @@
   
   .dayNum {
     font-weight: 700;
-    font-size: 14px;
-    color:#BBB
+    font-size: 12px;
+    color:#5f5f5f;
   }
   
   .dayBadge {
     font-size: 12px;
     padding: 2px 8px;
     border-radius: 999px;
-    background: rgba(255,255,255,0.16);
+    background: rgb(182, 123, 255);
+    color : #ffffff;
   }
   
   /* 상세 */
@@ -124,7 +125,7 @@
   .detailTitle {
     font-weight: 800;
     font-size: 16px;
-    color: #BBB
+    color: #5f5f5f;
   }
   
   .detailSub {
@@ -137,7 +138,7 @@
   .ghostBtn {
     border: 1px solid rgba(255,255,255,0.15);
     background: rgba(255,255,255,0.06);
-    color: inherit;
+    color: #BBB;
     padding: 8px 10px;
     border-radius: 10px;
     cursor: pointer;
@@ -225,10 +226,10 @@
   }
   
   .panelCard {
-    border: 1px solid rgba(255,255,255,0.12);
+    border: 1px solid rgba(255, 255, 255, 0.151);
     border-radius: 16px;
     padding: 14px;
-    background: rgba(255,255,255,0.04);
+    background: rgba(255, 255, 255, 0.236);
   }
   
   .panelHeader {
@@ -242,13 +243,13 @@
   .panelTitle {
     font-weight: 800;
     font-size: 16px;
-    color: #BBB
+    color: #5f5f5f;
   }
   
   .panelSub {
     font-size: 12px;
     opacity: 0.75;
-    color: #BBB
+    color: #5f5f5f;
   }
   
   .reserveList {
@@ -267,19 +268,19 @@
     font-weight: 800;
     font-size: 13px;
     margin-bottom: 4px;
-    color: #BBB
+    color: #5f5f5f;
   }
   
   .reserveTitle {
     font-size: 12px;
     opacity: 0.85;
-    color: #BBB;
+    color: #5f5f5f;
   }
   
   .emptyText {
     opacity: 0.7;
     padding: 10px 2px;
-    color: #BBB
+    color: #5f5f5f;
   }
   
   .reserveForm {
@@ -291,7 +292,7 @@
     margin-top: 10px;
     font-size: 12px;
     opacity: 0.7;
-    color: #BBB
+    color: #5f5f5f;
   }
   
   .dayCellCompact.past {
@@ -306,7 +307,7 @@
   
   .verifiedBadge {
     font-size: 14px;
-    color: #4ade80; /* 초록색 */
+    color: #31a75c; /* 초록색 */
     font-weight: 700;
   }
   
@@ -371,4 +372,56 @@
   color: #ff6b6b;
   cursor: pointer;
   font-size: 12px;
+}
+
+.dayCellCompact.editLocked {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.secondaryBtn {
+  margin-top: 8px;
+  background: rgba(255,255,255,0.06);
+}
+
+/*어드민 에셋 verification*/
+.verifyBtn {
+  margin-left: 8px;
+  font-size: 12px;
+  border: none;
+  background: rgba(255,255,255,0.08);
+  color: #ddd;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 6px;
+}
+
+.verifyBtn.on {
+  color: #4caf50;
+}
+
+.verifyBtn.off {
+  color: #ffb74d;
+}
+
+/*어드민 에셋 정기예약*/
+.adminCard {
+  border: 1px dashed rgba(255, 120, 120, 0.6);
+  background: rgba(255, 120, 120, 0.05);
+}
+.adminBtn {
+  width: 100%;
+  padding: 12px;
+  font-size: 14px;
+  color: #BBB
+}
+
+
+.adminCard .authBtn:hover {
+  filter: brightness(1.05);
+}
+.adminDivider {
+  margin: 16px 0;
+  height: 1px;
+  background: rgba(255,255,255,0.12);
 }

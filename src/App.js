@@ -1,18 +1,58 @@
-import React from "react";
-import { BrowserRouter, Routes, Route, Link , Navigate, useLocation} from "react-router-dom";
+import React, { useEffect, useMemo, useState } from "react";
+import { BrowserRouter, Routes, Route, Link, Navigate, useLocation } from "react-router-dom";
 import "./App.css";
 import Login from "./pages/Login";
 import Signup from "./pages/SignUp";
 import Reserve from "./pages/Reserve";
 import Check from "./pages/Check";
 import Cancel from "./pages/Cancel";
+import Find from "./pages/Find";
+import ResetPassword from "./pages/ResetPassword"
 import { supabase } from "./lib/supabase";
-import { AuthProvider, useAuth } from "./auth/AuthContext"; // ✅ 추가
+import { AuthProvider, useAuth } from "./auth/AuthContext";
 
 function Home() {
   const { user, loading } = useAuth();
 
-  if (loading) return null; // 또는 로딩 스피너
+  const [profile, setProfile] = useState(null);
+  const [profileLoading, setProfileLoading] = useState(false);
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      if (!user) {
+        setProfile(null);
+        return;
+      }
+      setProfileLoading(true);
+
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("name, join_year, voice_part")
+        .eq("id", user.id)
+        .single();
+
+      if (!error) setProfile(data);
+      setProfileLoading(false);
+    };
+
+    fetchProfile();
+  }, [user]);
+
+  const badgeText = useMemo(() => {
+    if (!user) return "";
+
+    const name = profile?.name ?? "사용자";
+    const part = profile?.voice_part?.charAt(0) ?? "";
+    const yy =
+      typeof profile?.join_year === "number"
+        ? String(profile.join_year).slice(-2)
+        : "";
+
+    // 예: "24Soprano 홍길동"
+    return `${yy}${part} ${name}`.trim();
+  }, [user, profile]);
+
+  if (loading) return null;
 
   return (
     <div className="page">
@@ -24,12 +64,9 @@ function Home() {
         ) : (
           <div className="userArea">
             <span className="userIdBadge">
-              {user.email}
+              {profileLoading ? "불러오는 중..." : badgeText}
             </span>
-            <button
-              className="logoutBtn"
-              onClick={() => supabase.auth.signOut()}
-            >
+            <button className="logoutBtn" onClick={() => supabase.auth.signOut()}>
               로그아웃
             </button>
           </div>
@@ -38,7 +75,7 @@ function Home() {
 
       <main className="hero">
         <div className="heroCard">
-          <h1 className="title">동아리방 예약</h1>
+          <h1 className="title">KAIST CHORUS 예약 시스템</h1>
           <p className="subtitle">원하는 기능을 선택하세요.</p>
 
           <div className="btnGrid">
@@ -85,7 +122,8 @@ export default function App() {
           <Route path="/login" element={<Login />} />
 
           <Route path="/signup" element={<Signup />} />
-          <Route path="/find" element={<Placeholder title="ID/비밀번호 찾기" />} />
+          <Route path="/find" element={<Find />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/check" element={<Check/>} />
           <Route
             path="/reserve"

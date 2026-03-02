@@ -12,7 +12,7 @@ export default function Signup() {
     password2: "",
     name: "",
     joinYear: "",
-    voicePart: "",
+    voicePart: "Soprano",
   });
 
   const [error, setError] = useState("");
@@ -88,8 +88,8 @@ export default function Signup() {
       return;
     }
   
-    alert("회원가입 완료! 로그인 페이지로 이동합니다.");
-    navigate("/login");
+    alert("회원가입 완료! 홈으로 이동합니다.");
+    navigate("/");
   };
 
   return (
